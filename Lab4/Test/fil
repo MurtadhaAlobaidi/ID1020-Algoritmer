@@ -1,0 +1,447 @@
+SymbolGraph
+
+package Package1;
+/*
+ *@author: code taken from Robert Sedgewick and Kevin Wayne.
+ *Algorithms & Datastructures: KTH ID1021-HT21-1. Tillägg Murtadha Alobaidi
+ *Lab4-Q2
+ * SymbolGraph till (input) och DepthFirstPaths till(output)
+ */
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.LinkedList;
+import java.util.Scanner;
+
+public class SymbolGraph
+{
+    private ST<String, Integer> st;// string -> index :Symboltabell där strängar är vertex namn och ints index
+    private String[] keys;// index  -> string: Array inverterat index, ger vertex namn associerat med varje int -index
+    private Graph G; // den underliggande grafen
+
+    /*
+    * Initierar en graf från en fil med den angivna avgränsaren(delimiter).
+    * namnet på en vertex följt av en lista med namnen
+    * filename the name of the file
+    * delimiter the delimiter between fields
+     */
+    public SymbolGraph(String filename, String delimiter)
+    {
+        st = new ST<String, Integer>();
+        // bygger index genom att läsa strängar att associera
+        Scanner in = new Scanner(filename);  // First pass
+         while (in.hasNextLine()) // builds the index
+         {
+            String[] a = in.nextLine().split(delimiter);//läsa strings
+            for (int i = 0; i < a.length; i++)//att associera var och en
+            {
+                if (!st.contains(a[i]))//distinct string
+                    st.put(a[i], st.size());// med en index.
+            }
+        }
+
+        keys = new String[st.size()]; //inverterat index för att få strängnycklar i en array
+        for (String name : st.keys()) // to get string keys
+        {
+            keys[st.get(name)] = name; //är en array.
+        }
+
+        // andra passet bygger grafen (genom att ansluta först vertex på varje line)
+        G = new Graph(st.size());
+
+        in = new Scanner(filename);//andra pass
+
+        while (in.hasNextLine()) // builds the graph
+        {
+            String[] a = in.nextLine().split(delimiter);//genom att ansluta
+            int v = st.get(a[0]);// first vertex
+            for (int i = 1; i < a.length; i++) // on each line
+            {
+                int w = st.get(a[i]);
+                G.addEdge(v, w);// to all the others.
+            }
+        }
+    }
+
+/*    //Innehåller grafen vertex med namnet
+    //s namn av a vertex
+    public boolean contains(String s) {
+        return st.contains(s);
+    }*/
+
+    // Returnerar heltalet som är associerat med vertex named s
+    //s the name of a vertex
+    public int index(String s) {return st.get(s);}
+
+    //Returnerar namnet på hörnet(v) som är associerat med integer v
+    //v integer som motsvarar en vertex V
+    //namnet på vertex som är associerat med integer v
+    public String name(int v) {return keys[v];}
+
+    //Returns grafen som är kopplad till symbol graph.
+    public Graph G() {return G;}
+
+    /************************ HÄR ÄR DepthFirstPaths FÖRSTA SÖKALGORITMEN **********************************************/
+
+  public static class DepthFirstPaths
+  {
+        public boolean[] marked; // OM DFS() blivit kallad för detta vertex?
+        private int[] edgeTo; // Siste vertex på känd väg till detta vertex.
+        private final int s;         // source vertex
+
+        //Beräknar en sökväg mellan s och varannan vertex i grafen
+        //G the graph
+        //s the source vertex
+        public DepthFirstPaths(Graph G, int s)
+        {
+            this.s = s;
+            edgeTo = new int[G.V()];
+            marked = new boolean[G.V()];
+            dfs(G, s);
+        }
+
+        // depth first search from v
+        private void dfs(Graph G, int v)
+        {
+            marked[v] = true;
+            for (int w : G.adj(v))
+                if (!marked[w])
+                {
+                    edgeTo[w] = v;
+                    dfs(G, w);
+                }
+        }
+
+    //Finns det en väg mellan vertex s och vertex v
+    //v the vertex
+    public boolean hasPathTo(int v) {
+            return marked[v];
+        }
+
+    public Iterable<Integer> pathTo(int v)
+    {
+          if (!hasPathTo(v))
+              return null;
+          //Bytt till LinkedList så att utskrift av data är i den ordning jag vill.
+          LinkedList<Integer> path = new LinkedList<Integer>();
+          for (int x = v; x != s; x = edgeTo[x])
+           path.addFirst(x);
+           path.addFirst(s);
+
+           return path;
+    }
+ }
+
+ /********************* Main *******************************************************************************************/
+     public static void main(String[] args) throws FileNotFoundException
+    {
+        System.out.println("Assignment 1");
+        System.out.println("******************");
+        Scanner readFil = new Scanner(new File("Test4.txt")); //läsa från fil
+
+        //Läsa alla Hörnen
+        StringBuilder s = new StringBuilder();
+        while (readFil.hasNextLine())
+        {
+            s.append(readFil.nextLine());
+            s.append('\n');
+        }
+        //min alla lista är out
+        String läsaOut = s.toString();
+        // Skapa en ny symbolgraf där ord separeras med "".
+        SymbolGraph st = new SymbolGraph(läsaOut, " ");
+
+        //Ta emot hörnen 1 Input
+        System.out.println("Första Hörnen: ");
+        Scanner first = new Scanner(System.in);//Input scanner
+        String startHornen = first.nextLine();//Scanner till String
+        int vertex1= st.index(startHornen);//String till index
+
+        //Ta emot hörnen 2 Input
+        System.out.println("Andra Hörnen: ");
+        Scanner end = new Scanner(System.in);//Input scanner
+        String endHornen = end.nextLine();//Scanner till String
+        int vertex2= st.index(endHornen);//String till index
+
+        String filename  = startHornen;// First state
+        String delimiter = endHornen;// End state.
+
+        //Create a DFS object
+        SymbolGraph.DepthFirstPaths search = new SymbolGraph.DepthFirstPaths(st.G(), vertex1);
+
+        System.out.println("\nDin Input: "+filename + " -> " + delimiter + ": ");
+
+        if (search.hasPathTo(st.index(filename)))//första Hörnen(v) input och titta på hela lista
+        {
+            System.out.println("\nDin kant: ");
+            for (int i : search.pathTo(st.index(delimiter)))//andra Hörnen(v) och titta om det finns koppling
+            {
+                if (st.name(i).equals(filename))//om det finns din hörnen
+                    System.out.print(st.name(i));//skriv ut den hörnen
+
+                else if(vertex2==0){
+                    throw new java.lang.IllegalArgumentException("No case");
+                }
+
+                else
+                    System.out.print(" - " + st.name(i) + " ");
+            }
+            System.out.println();
+        }
+    }
+
+}
+/***************************************************************************************************************************/
+ST
+package Package1;
+/*
+ *@author: code taken from Robert Sedgewick and Kevin Wayne.
+ *Algorithms & Datastructures: KTH ID1021-HT21-1. Tillägg Murtadha Alobaidi
+ *Lab4-Q2
+ *BST(from kapitel 3) Symboltabell krävs för att köra SymbolGraph.
+ */
+
+
+import java.util.*;
+
+public class ST<Key extends Comparable<Key>, Value>
+{
+    private Node root; // root of ST
+
+    private class Node
+    {
+        private Key key; // key
+        private Value val; // associated value
+        private Node left, right; // links to subtrees
+        private int N; //noder i subtree rotade här
+
+        public Node(Key key, Value val, int N)
+        {
+            this.key = key;
+            this.val = val;
+            this.N = N;
+        }
+    }
+    //Returnerar antalet nyckel-värdepar i denna symboltabell.
+    public int size() {
+        return size(root);
+    }
+
+
+  // returnera antal nyckel-värdepar i ST med rötterna x
+    private int size(Node x) {
+        if (x == null) return 0;
+        else return x.N;
+    }
+    //Returnerar värdet som är associerat med den angivna nyckeln.
+    public Value get(Key key) {
+        return get(root, key);
+    }
+
+    private Value get(Node x, Key key) {
+// Returvärde associerat med nyckeln i delträdet som är rotat till x;
+//returnera null om nyckeln inte finns i subtree rotad på x.
+        if (x == null) return null;
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0) return get(x.left, key);
+        else if (cmp > 0) return get(x.right, key);
+        else return x.val;
+    }
+   //Infogar det angivna nyckel-värdeparet i symboltabellen och skriver över det gamla
+    public void put(Key key, Value val) {
+        root = put(root, key, val);
+    }
+
+    private Node put(Node x, Key key, Value val)
+    {
+//Ändra nyckelns värde till val om nyckeln i subtree är rotad till x.
+//Annars lägger du till en ny nod i delträdets associeringsnyckel med val.
+        if (x == null) return new Node(key, val, 1);
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0) x.left = put(x.left, key, val);
+        else if (cmp > 0) x.right = put(x.right, key, val);
+        else x.val = val;
+        x.N = size(x.left) + size(x.right) + 1;
+        return x;
+    }
+/*   // Returnera antalet nycklar i symboltabellen
+    public int rank(Key key) { return rank(key, root); }*/
+
+/*   //Returnera antal nycklar mindre än x.nyckel i delträdet som är rotat till x.
+    private int rank(Key key, Node x)
+    {
+        if (x == null) return 0;
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0) return rank(key, x.left);
+        else if (cmp > 0) return 1 + size(x.left) + rank(key, x.right);
+        else return size(x.left);
+    }*/
+    //Innehåller denna symboltabell den angivna nyckeln?
+    public boolean contains(Key key)
+    {
+        if (key == null) {
+            throw new IllegalArgumentException("Argument to contains() cannot be null");
+        }
+        return get(key) != null;
+    }
+    //Returnerar alla nycklar i symboltabellen
+    //För att iterera över alla nycklar i symboltabellen med namnet
+    public Iterable<Key> keys() {
+        return keys(min(), max());
+    }
+    /* Returns all keys in the symbol table in the given range,
+    * lo minsta slutpunkt
+    * hi maximal slutpunkt
+    * återställ alla nycklar i symboltabellen mellan lo och hi
+     */
+    public Iterable<Key> keys(Key lo, Key hi)
+    {
+        Queue<Key> queue = new LinkedList<>();
+        keys(root, queue, lo, hi);
+        return queue;
+    }
+
+    //
+    private void keys(Node x, Queue<Key> queue, Key lo, Key hi)
+    {
+        if (x == null)
+            return;
+        int cmplo = lo.compareTo(x.key);
+        int cmphi = hi.compareTo(x.key);
+        if (cmplo < 0)
+            keys(x.left, queue, lo, hi);
+        if (cmplo <= 0 && cmphi >= 0)
+            queue.add(x.key);
+        if (cmphi > 0)
+            keys(x.right, queue, lo, hi);
+    }
+
+    public Key min () {return min(root).key;}
+
+    private Node min (Node x)
+    {
+        if (x.left == null) return x;
+        return min(x.left);
+    }
+
+    public Key max (){return max(root).key;}
+
+    private Node max (Node x)
+    {
+        if (x.right == null) return x;
+        return max(x.right);
+    }
+
+    /*public Key floor (Key key)
+    {
+        Node x = floor(root, key);
+        if (x == null) return null;
+        return x.key;
+    }*/
+
+    /*private Node floor (Node x, Key key)
+    {
+        if (x == null) return null;
+        int cmp = key.compareTo(x.key);
+        if (cmp == 0) return x;
+        if (cmp < 0) return floor(x.left, key);
+        Node t = floor(x.right, key);
+        if (t != null) return t;
+        else return x;
+    }*/
+
+}
+/***************************************************************************************************************************/
+Graph
+
+package Package1;
+/*
+ *@author: code taken from Robert Sedgewick and Kevin Wayne.
+ *Algorithms & Datastructures: KTH ID1021-HT21-1. Tillägg Murtadha Alobaidi
+ *Lab4-Q1
+ *Graph används i SymbolGraph (from kapitel 4 GRAPHS)
+ */
+import java.util.Scanner;
+
+public class Graph
+{
+    private final int V;//nummer av Hörnen (V)
+    private int E;//nummer av Kanten (E)
+    private Bag<Integer>[] adj;//Array ut av referens Bag som innehåller hel tal (linked list)
+
+    /* Starata toma graf med sin hörnen V
+     * Skapa ett graf med att anropa antal hörn (V)
+     */
+    public Graph(int V)
+    {
+        this.V = V;//Satt upp antalet hörnen (V)
+        this.E = 0;//Satt upp Kant (E)
+        //Skapa nytt array som innehåller index ( hörn V)
+        // Varje plats i den array har en referens till en Bag som kan innehåller hel tal
+        adj = (Bag<Integer>[]) new Bag[V];
+        //Gå genom alla lista
+        for (int v = 0; v < V; v++)
+        {
+            adj[v] = new Bag<Integer>();//tom bag
+        }
+    }
+
+    // Läsa in från filen som inhåller kant(E) och hörnen(V)
+    public Graph(Scanner in)
+    {
+            this.V = in.nextInt();//Läsa hörnen V och bygga graf V
+            int E = in.nextInt();//Läsa kanten E
+             //för att adera en kant(E)
+            for (int i = 0; i < E; i++)
+            {
+                int v = in.nextInt();//för att läsa startHörnen(v)
+                int w = in.nextInt();//för att läsa endHörnen(d)
+                addEdge(v, w);
+            }
+    }
+    /* Hur mycket vertices(hörnen) (V)
+    * vi har och Returnera nummer of Vertices (hörnen)
+     */
+    public int V() {return V;}
+
+    /** Hur mycket Edge(Kanten) (E)
+     * Returnera nummer of Edge(Kanten)
+     */
+    public int E() {return E;}
+
+    /* För att lägga till ett edge(kant)(E)
+    *  som går mellan två vertices (hörnen) (hörnen v och w)
+    */
+    public void addEdge(int v, int w)
+    {
+        E++;
+        //från hörnen (v) vi kan nå hörnen (w) och lägg den i Bag
+        adj[v].add(w);
+        //från hörnen (w) vi kan nå hörnen (v) och lägg den i Bag (icke riktat graf)
+        adj[w].add(v);
+    }
+
+    /* För att få fram ett Objekt som vi kan Iterera över som innehåller alla hörnen (v,w) som har direkt
+     * bindning så vi kan nå vid en kant(E) från en vis strata hörn(v)
+     */
+    public Iterable<Integer> adj(int v) {return adj[v];}
+
+  /* *//* För att return String för Grafen
+   * return nummer av hörnen(V) med nummer av kanten (E) följade med listan V
+   *//*
+    public String toString()
+    {
+        String s=(V + " vertices, " + E + " edges ");
+        for (int v = 0; v < V; v++)
+        {
+            s+=v + ": ";
+            for (int w : adj[v])
+            {
+                s+=w + " ";
+            }
+        }
+        return s;
+    }*/
+
+}
+
